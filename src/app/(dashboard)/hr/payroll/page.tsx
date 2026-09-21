@@ -1,0 +1,10 @@
+// TODO: implement per docs/process-flows/ — pattern to follow is hr/attendance/page.tsx
+// (Compute Hours/OT/Deductions, Approval gateway, Disbursement — see lib/actions/salary-distribution.ts)
+export default function Page() {
+  return (
+    <div>
+      <h1 className="text-xl font-semibold">Payroll</h1>
+      <p className="text-sm text-muted-foreground">Not yet implemented. See docs/process-flows/.</p>
+    </div>
+  );
+}
