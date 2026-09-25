@@ -39,7 +39,7 @@ real-time data source described in the project's root-cause analysis.
 
 ```bash
 git clone <your-repo-url>
-cd jjpg-erp
+cd ERP-ITS152
 npm install
 cp .env.local.example .env.local   # fill in your Supabase project URL + anon key
 npx supabase login
