@@ -1,4 +1,4 @@
-# JJPG Trading — Phase 1 ERP
+# JJPG Trading
 
 A web-based ERP covering JJPG Trading's four Phase-1 priority processes:
 
