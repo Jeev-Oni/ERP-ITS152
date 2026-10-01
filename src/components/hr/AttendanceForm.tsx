@@ -52,7 +52,7 @@ export function AttendanceForm({ employees }: { employees: { id: string; full_na
       <button type="submit" disabled={pending} className="rounded bg-primary px-4 py-1.5 text-sm text-primary-foreground">
         {pending ? 'Saving…' : 'Log Attendance'}
       </button>
-      {error && <p className="w-full text-sm text-red-600">{error}</p>}
+      {error && <p className="w-full text-sm text-red-400">{error}</p>}
     </form>
   );
 }

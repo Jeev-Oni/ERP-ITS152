@@ -56,7 +56,7 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 -- Helper used throughout the RLS migration: current user's role, in one place.
-create function public.current_role()
+create function public.current_app_role()
 returns app_role as $$
   select role from profiles where id = auth.uid();
 $$ language sql stable security definer;

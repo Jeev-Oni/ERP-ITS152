@@ -25,8 +25,8 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-lg border p-6">
-        <h1 className="text-lg font-semibold">JJPG Trading — ERP Login</h1>
+      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-surface p-6">
+        <h1 className="text-lg font-semibold text-foreground">JJPG Trading — ERP Login</h1>
         <input
           type="email"
           placeholder="Email"
@@ -43,7 +43,7 @@ export default function LoginPage() {
           className="w-full rounded border px-3 py-2 text-sm"
           required
         />
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-400">{error}</p>}
         <button type="submit" className="w-full rounded bg-primary py-2 text-sm text-primary-foreground">
           Sign in
         </button>

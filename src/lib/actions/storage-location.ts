@@ -3,6 +3,16 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 
+/** Storage Location Master (bin) creation — Warehouse Supervisor. */
+export async function createStorageLocation(input: { bin_code: string; zone?: string; capacity?: number }) {
+  const supabase = createClient();
+  const { error } = await supabase.from('storage_locations').insert(input);
+  if (error) return { error: error.message };
+
+  revalidatePath('/warehouse/storage-locations');
+  return { success: true };
+}
+
 /**
  * "Check Existing Location Mapping" + "Location Already Assigned?" gateway.
  * A single lookup, not a status machine — matches the doc's note that this process
