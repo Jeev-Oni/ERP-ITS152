@@ -3,4 +3,4 @@
 // after your first `supabase db push`, so every query in the app is fully typed
 // against the real schema in supabase/migrations/.
 
-export type Database = Record<string, unknown>;
+export type Database = any;
