@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Radio, ShieldCheck } from 'lucide-react';
 import { SidebarNav } from '@/components/shared/SidebarNav';
+import { LogoutButton } from '@/components/shared/LogoutButton';
 
 const ROLE_LABELS: Record<string, string> = {
   admin_staff: 'Admin Staff',
@@ -52,6 +53,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <p className="text-sm text-foreground">{profile?.full_name}</p>
             <p className="text-xs text-primary">{roleLabel}</p>
           </div>
+          <LogoutButton />
         </div>
       </header>
 
