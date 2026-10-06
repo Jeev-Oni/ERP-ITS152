@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { verifyMovement, resolveDiscrepancy } from '@/lib/actions/warehouse-recording';
+import { verifyMovement, resolveDiscrepancy, deleteStockMovement } from '@/lib/actions/warehouse-recording';
+import { ConfirmButton } from '@/components/shared/ConfirmButton';
+import { hasRole } from '@/lib/roles';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 
 type Discrepancy = { id: string; physical_count: number; system_count: number; resolved_at: string | null };
@@ -12,6 +14,7 @@ type Movement = {
   quantity: number;
   reference_note: string | null;
   status: string;
+  logged_by: string;
   logged_at: string;
   items?: { sku: string; name: string } | null;
   stock_discrepancies?: Discrepancy[] | null;
@@ -80,8 +83,31 @@ function ResolveControl({ discrepancy }: { discrepancy: Discrepancy }) {
   );
 }
 
-export function StockMovementsTable({ movements, role }: { movements: Movement[]; role: string }) {
-  const isSupervisor = role === 'warehouse_supervisor';
+// A movement past 'pending' has already changed the item balance, so deleting it also puts
+// the balance back (done by a database trigger). The confirm button says so.
+function DeleteControl({ movement }: { movement: Movement }) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div>
+      <ConfirmButton
+        label="Delete"
+        confirmLabel={movement.status === 'pending' ? 'Delete' : 'Delete & undo stock'}
+        onConfirm={() => deleteStockMovement(movement.id)}
+        onDone={() => router.refresh()}
+        onError={setError}
+      />
+      {error && <p className="mt-1 max-w-xs text-xs text-red-400">{error}</p>}
+    </div>
+  );
+}
+
+export function StockMovementsTable({ movements, role, userId }: { movements: Movement[]; role: string; userId: string }) {
+  const isSupervisor = hasRole(role, ['warehouse_supervisor']);
+  const showActions = hasRole(role, ['warehouse_supervisor', 'warehouse_staff']);
+  // Supervisor: any movement. Staff: only their own, until the Supervisor has verified it.
+  const canDelete = (m: Movement) =>
+    isSupervisor || (role === 'warehouse_staff' && m.logged_by === userId && ['pending', 'logged'].includes(m.status));
 
   return (
     <table className="w-full text-sm">
@@ -93,7 +119,7 @@ export function StockMovementsTable({ movements, role }: { movements: Movement[]
           <th>Reference</th>
           <th>Status</th>
           <th>Logged</th>
-          {isSupervisor && <th>Action</th>}
+          {showActions && <th>Action</th>}
         </tr>
       </thead>
       <tbody>
@@ -107,17 +133,20 @@ export function StockMovementsTable({ movements, role }: { movements: Movement[]
               <td className="text-muted-foreground">{m.reference_note ?? '—'}</td>
               <td><StatusBadge status={m.status} /></td>
               <td className="text-muted-foreground">{new Date(m.logged_at).toLocaleDateString()}</td>
-              {isSupervisor && (
+              {showActions && (
                 <td>
-                  {m.status === 'logged' && <VerifyControl movementId={m.id} />}
-                  {m.status === 'discrepancy' && openDiscrepancy && <ResolveControl discrepancy={openDiscrepancy} />}
+                  <div className="space-y-1.5">
+                    {isSupervisor && m.status === 'logged' && <VerifyControl movementId={m.id} />}
+                    {isSupervisor && m.status === 'discrepancy' && openDiscrepancy && <ResolveControl discrepancy={openDiscrepancy} />}
+                    {canDelete(m) && <DeleteControl movement={m} />}
+                  </div>
                 </td>
               )}
             </tr>
           );
         })}
         {movements.length === 0 && (
-          <tr><td colSpan={isSupervisor ? 7 : 6} className="py-4 text-muted-foreground">No stock movements yet.</td></tr>
+          <tr><td colSpan={showActions ? 7 : 6} className="py-4 text-muted-foreground">No stock movements yet.</td></tr>
         )}
       </tbody>
     </table>

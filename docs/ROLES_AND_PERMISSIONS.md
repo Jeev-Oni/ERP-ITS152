@@ -46,3 +46,43 @@ approver in Salary Distribution, or the four-lane chain in Trucking Logistics). 
 schema, a handoff is literally the point where write permission on the *next* status value
 moves from one role to another — so `grep`-ing the RLS file for a table shows you every
 handoff in that process at a glance.
+
+## CRUD matrix
+
+Added in `supabase/migrations/0009_crud_policies.sql`. "Own role" means the role named on the
+BPMN task; `system_admin` can do everything its role-owner can. Every Update/Delete server
+action calls `.select('id')` and reports zero affected rows, because an RLS-denied UPDATE
+or DELETE does not raise an error.
+
+| Data | Create | Update | Delete | Rule that protects the record |
+|---|---|---|---|---|
+| Employees | HR/Payroll | HR/Payroll | HR/Payroll | Delete refused if the employee has attendance/payroll history, use Deactivate |
+| Attendance | Admin Staff or HR | Admin Staff or HR | Admin Staff or HR | Frozen once the covering cutoff is `computed`/`pending_approval`/`approved`/`disbursed` (`is_attendance_locked()`); still editable while `open`, `closed`, or `revision_needed`. HR can unlock a computed period with "Send Back for Correction" |
+| Payroll cutoffs | HR/Payroll | HR/Payroll (dates, `open` only) | HR/Payroll (`open` only) | Computed/approved/disbursed cutoffs are permanent payroll records |
+| Items (SKU) | Warehouse Supervisor | Warehouse Staff or Supervisor: sku, name, unit, reorder point | Supervisor | `current_balance` is not editable by anyone (column privilege); delete refused with stock on hand or any movement history |
+| Stock movements | Warehouse Staff | status transitions only (log, verify) | Supervisor: any. Staff: own entries until verified | Deleting a movement that already changed the balance automatically reverses it, and is refused if that would make stock negative. Every deletion is written to `audit_log` |
+| Storage bins | Warehouse Supervisor | Supervisor | Supervisor | FK blocks delete while items are assigned |
+| Item to bin assignment | Warehouse Staff | Warehouse Staff (move) | Staff or Supervisor (unassign) | none |
+| Trucks | Fleet Supervisor | Fleet Supervisor | Fleet Supervisor | Delete refused if trip/maintenance history, use Deactivate |
+| Drivers | Fleet Supervisor | Fleet Supervisor (System Admin links the login) | Fleet Supervisor | Delete refused if trip history, use Deactivate |
+| Trips | Dispatcher | Dispatcher, only while `dispatched` | Dispatcher, only while `dispatched` | After departure a trip is audit trail; failed deliveries are rescheduled as a *new* trip |
+| Maintenance jobs | Fleet Supervisor | date change while `scheduled` | only when `cancelled` | Completed jobs are kept as maintenance history |
+| User accounts | System Admin | System Admin (name, role, department, active) | none (Deactivate) | Admins can't demote or deactivate themselves |
+
+## Fixes bundled in migration 0009
+
+These flows were silently blocked by RLS before (each returned 0 rows with no error):
+
+- Management approve/reject and Finance disburse could not update `payroll_cutoffs.status`.
+- Warehouse Staff could not flip a movement from `pending` to `logged`, so the balance trigger never fired.
+- Drivers could not read their own `drivers` row, so "Your Trips" was empty and they could not start or confirm a trip.
+- Admin Staff could not read `employees`, so the attendance dropdown was empty. They now read the
+  `employee_directory` view (id, code, name, active only; no pay data).
+- HR could delete a *disbursed* payroll cutoff, cascading to its payslips.
+
+## Added in migration 0010
+
+- HR can correct attendance (same lock rule as before).
+- Warehouse Staff can edit an item's SKU/name/unit/reorder point. Adding and deleting items stays with the Supervisor, and `current_balance` is still untypeable by anyone.
+- Stock movements can be deleted (see matrix). `audit_log` gained a `detail` column so a deletion records what was removed.
+- Every screen that is view-only for the signed-in role now says so and names the role that can edit it.

@@ -6,6 +6,7 @@ import { PayrollComputationsTable } from '@/components/hr/PayrollComputationsTab
 import { PayrollApprovalPanel } from '@/components/hr/PayrollApprovalPanel';
 import { DisbursementPanel } from '@/components/hr/DisbursementPanel';
 import { GeneratePayslipsButton } from '@/components/hr/GeneratePayslipsButton';
+import { PayrollProgress } from '@/components/hr/PayrollProgress';
 
 // One payroll_cutoffs row end to end: compute -> approve/revise -> disburse -> payslips.
 // This page is the full state machine described in docs/process-flows/salary-distribution.md.
@@ -40,6 +41,8 @@ export default async function PayrollCutoffDetailPage({ params }: { params: { id
         </div>
         <CutoffActions cutoffId={cutoff.id} status={cutoff.status} currentRole={role} />
       </div>
+
+      <PayrollProgress status={cutoff.status} role={role} />
 
       <PayrollComputationsTable
         computations={(computations as any) ?? []}

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
-import { RoleGate } from '@/components/shared/RoleGate';
+import { hasRole } from '@/lib/roles';
 import { CreateItemForm } from '@/components/warehouse/CreateItemForm';
+import { ItemRow } from '@/components/warehouse/ItemRow';
+import { ReadOnlyNotice } from '@/components/shared/ReadOnlyNotice';
 
 // Item/SKU Master — the shared reference table Warehouse Recording and Storage Location
 // both build on.
@@ -9,16 +11,17 @@ export default async function ItemsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single();
   const role = (profile?.role ?? '') as string;
+  const canEdit = hasRole(role, ['warehouse_staff', 'warehouse_supervisor']); // fix SKU / name / unit / reorder point
+  const canManage = hasRole(role, ['warehouse_supervisor']); // add and delete items
 
   const { data: items } = await supabase.from('items').select('*').order('sku');
 
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-foreground">Item / SKU Master</h1>
+      {!canEdit && <ReadOnlyNotice role={role} who="Warehouse Staff and Warehouse Supervisor" />}
 
-      <RoleGate currentRole={role as any} allow={['warehouse_supervisor']}>
-        <CreateItemForm />
-      </RoleGate>
+      {canManage && <CreateItemForm />}
 
       <table className="w-full text-sm">
         <thead>
@@ -28,25 +31,23 @@ export default async function ItemsPage() {
             <th>Unit</th>
             <th>Current Balance</th>
             <th>Reorder Point</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {(items ?? []).map((item: any) => (
-            <tr key={item.id} className="border-b border-border">
-              <td className="py-2 font-mono text-xs">{item.sku}</td>
-              <td>{item.name}</td>
-              <td>{item.unit}</td>
-              <td className={item.reorder_point && item.current_balance <= item.reorder_point ? 'text-red-400' : ''}>
-                {item.current_balance}
-              </td>
-              <td>{item.reorder_point ?? '—'}</td>
-            </tr>
+            <ItemRow key={item.id} item={item} canEdit={canEdit} canDelete={canManage} />
           ))}
           {(items ?? []).length === 0 && (
-            <tr><td colSpan={5} className="py-4 text-muted-foreground">No items yet.</td></tr>
+            <tr><td colSpan={6} className="py-4 text-muted-foreground">No items yet.</td></tr>
           )}
         </tbody>
       </table>
+      {canEdit && (
+        <p className="text-xs text-muted-foreground">
+          Balances can&apos;t be typed in. They change only when a stock movement is logged (or deleted), which keeps the ledger accurate. Adding and deleting items is done by the Warehouse Supervisor.
+        </p>
+      )}
     </div>
   );
 }

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { closeCutoff, computePayroll } from '@/lib/actions/salary-distribution';
+import { closeCutoff, computePayroll, reopenCutoffForCorrection } from '@/lib/actions/salary-distribution';
+import { ConfirmButton } from '@/components/shared/ConfirmButton';
 import { RoleGate } from '@/components/shared/RoleGate';
 
 // "Cutoff Reached?" gateway + "Compute Hours, OT & Deductions" — both HR/Payroll Officer.
@@ -53,6 +54,16 @@ export function CutoffActions({
           >
             {pending ? 'Computing…' : status === 'revision_needed' ? 'Recompute Payroll' : 'Compute Payroll'}
           </button>
+        )}
+        {status === 'computed' && (
+          <ConfirmButton
+            label="Send Back for Correction"
+            confirmLabel="Send back"
+            danger={false}
+            onConfirm={() => reopenCutoffForCorrection(cutoffId)}
+            onDone={() => router.refresh()}
+            onError={setError}
+          />
         )}
         {error && <p className="text-sm text-red-400">{error}</p>}
       </div>

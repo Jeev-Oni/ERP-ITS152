@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { RoleGate } from '@/components/shared/RoleGate';
 import { RecordMovementForm } from '@/components/warehouse/RecordMovementForm';
 import { StockMovementsTable } from '@/components/warehouse/StockMovementsTable';
+import { hasRole } from '@/lib/roles';
 
 // Warehouse Recording — receipts and issues converge on one log, verified by the
 // supervisor before the audit trail closes (docs/process-flows/warehouse-recording.md).
@@ -26,7 +27,15 @@ export default async function StockMovementsPage() {
         <RecordMovementForm items={(items as any) ?? []} />
       </RoleGate>
 
-      <StockMovementsTable movements={(movements as any) ?? []} role={role} />
+      <StockMovementsTable movements={(movements as any) ?? []} role={role} userId={user!.id} />
+
+      {hasRole(role, ['warehouse_supervisor', 'warehouse_staff']) && (
+        <p className="text-xs text-muted-foreground">
+          Made a mistake? Delete the movement and log it again. If it had already changed the stock balance, the
+          balance is put back automatically and the deletion is recorded in the audit log. Staff can delete their own
+          entries until the Supervisor verifies them; the Supervisor can delete any.
+        </p>
+      )}
     </div>
   );
 }

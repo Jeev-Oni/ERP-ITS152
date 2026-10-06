@@ -8,6 +8,8 @@ import {
   type AttendanceLogInput,
   type PayrollApprovalInput,
 } from '@/lib/validations/salary-distribution';
+import { attendanceUpdateSchema, cutoffSchema, employeeSchema } from '@/lib/validations/master-data';
+import { dbError, noRowsAffected, type ActionResult } from './result';
 
 // Ordinary overtime multiplier. Adjust to match actual company/labor-code policy —
 // this is a placeholder so the pipeline is demonstrably end-to-end, not a payroll-law claim.
@@ -46,7 +48,7 @@ export async function closeCutoff(payrollCutoffId: string) {
 }
 
 /** "Log Daily Attendance" — Admin Staff. */
-export async function logAttendance(input: AttendanceLogInput) {
+export async function logAttendance(input: AttendanceLogInput): Promise<ActionResult> {
   const parsed = attendanceLogSchema.parse(input);
   const supabase = createClient();
 
@@ -57,7 +59,11 @@ export async function logAttendance(input: AttendanceLogInput) {
     ...parsed,
     logged_by: user.id,
   });
-  if (error) return { error: error.message };
+  if (error) {
+    return dbError(error, {
+      duplicate: 'Attendance for that employee on that date is already logged. Edit the existing entry instead.',
+    });
+  }
 
   revalidatePath('/hr/attendance');
   return { success: true };
@@ -265,4 +271,174 @@ export async function generatePayslips(payrollCutoffId: string) {
   revalidatePath('/hr/payslips');
   revalidatePath(`/hr/payroll/${payrollCutoffId}`);
   return { success: true, generated: toInsert.length };
+}
+
+// ============================================================
+// Employee Master — HR / Payroll Officer (RLS: employees_write)
+// ============================================================
+
+function employeeFields(p: ReturnType<typeof employeeSchema.parse>) {
+  return {
+    employee_code: p.employee_code,
+    full_name: p.full_name,
+    position: p.position ?? null,
+    daily_rate: p.daily_rate,
+    bank_account_number: p.bank_account_number ?? null,
+  };
+}
+
+export async function createEmployee(input: unknown): Promise<ActionResult> {
+  const parsed = employeeSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = createClient();
+  const { error } = await supabase.from('employees').insert(employeeFields(parsed.data));
+  if (error) return dbError(error, { duplicate: 'That employee code is already in use.' });
+
+  revalidatePath('/hr/employees');
+  return { success: true };
+}
+
+export async function updateEmployee(id: string, input: unknown): Promise<ActionResult> {
+  const parsed = employeeSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = createClient();
+  const { data, error } = await supabase.from('employees').update(employeeFields(parsed.data)).eq('id', id).select('id');
+  if (error) return dbError(error, { duplicate: 'That employee code is already in use.' });
+  if (!data?.length) return noRowsAffected();
+
+  revalidatePath('/hr/employees');
+  revalidatePath('/hr/attendance');
+  return { success: true };
+}
+
+/** Soft-disable: keeps all attendance/payroll history, and drops them from future cutoffs. */
+export async function setEmployeeActive(id: string, isActive: boolean): Promise<ActionResult> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from('employees').update({ is_active: isActive }).eq('id', id).select('id');
+  if (error) return dbError(error);
+  if (!data?.length) return noRowsAffected();
+
+  revalidatePath('/hr/employees');
+  revalidatePath('/hr/attendance');
+  return { success: true };
+}
+
+/**
+ * Hard delete, only for employees with no history. attendance_logs cascade on delete, so
+ * without this check a delete would silently wipe someone's attendance records.
+ */
+export async function deleteEmployee(id: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const inUse = 'This employee has attendance or payroll history. Deactivate them instead of deleting.';
+
+  const { count, error: countError } = await supabase
+    .from('attendance_logs')
+    .select('id', { count: 'exact', head: true })
+    .eq('employee_id', id);
+  if (countError) return dbError(countError);
+  if (count && count > 0) return { error: inUse };
+
+  const { data, error } = await supabase.from('employees').delete().eq('id', id).select('id');
+  if (error) return dbError(error, { inUse });
+  if (!data?.length) return noRowsAffected();
+
+  revalidatePath('/hr/employees');
+  return { success: true };
+}
+
+// ============================================================
+// Attendance — Admin Staff. RLS freezes rows once payroll for the period is computed.
+// ============================================================
+
+const LOCKED_MSG =
+  'This attendance entry is locked: payroll for its period has already been computed. ' +
+  'Ask HR to send the cutoff back for revision first.';
+
+export async function updateAttendance(id: string, input: unknown): Promise<ActionResult> {
+  const parsed = attendanceUpdateSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('attendance_logs')
+    .update({
+      log_date: parsed.data.log_date,
+      time_in: parsed.data.time_in ?? null,
+      time_out: parsed.data.time_out ?? null,
+      hours_worked: parsed.data.hours_worked,
+    })
+    .eq('id', id)
+    .select('id');
+  if (error) return dbError(error, { duplicate: 'That employee already has an entry for that date.' });
+  if (!data?.length) return noRowsAffected(LOCKED_MSG);
+
+  revalidatePath('/hr/attendance');
+  return { success: true };
+}
+
+export async function deleteAttendance(id: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from('attendance_logs').delete().eq('id', id).select('id');
+  if (error) return dbError(error);
+  if (!data?.length) return noRowsAffected(LOCKED_MSG);
+
+  revalidatePath('/hr/attendance');
+  return { success: true };
+}
+
+// ============================================================
+// Payroll cutoffs — HR. Only editable/deletable while still 'open'.
+// ============================================================
+
+export async function updatePayrollCutoff(id: string, input: unknown): Promise<ActionResult> {
+  const parsed = cutoffSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = createClient();
+  // .eq('status','open') so a period can't be re-dated after attendance has been computed.
+  const { data, error } = await supabase
+    .from('payroll_cutoffs')
+    .update({ period_start: parsed.data.period_start, period_end: parsed.data.period_end })
+    .eq('id', id)
+    .eq('status', 'open')
+    .select('id');
+  if (error) return dbError(error, { duplicate: 'A cutoff for exactly that period already exists.' });
+  if (!data?.length) return noRowsAffected('Only an open cutoff can be edited.');
+
+  revalidatePath('/hr/payroll');
+  return { success: true };
+}
+
+export async function deletePayrollCutoff(id: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from('payroll_cutoffs').delete().eq('id', id).eq('status', 'open').select('id');
+  if (error) return dbError(error);
+  if (!data?.length) return noRowsAffected('Only an open cutoff can be deleted.');
+
+  revalidatePath('/hr/payroll');
+  return { success: true };
+}
+
+/**
+ * HR takes a computed cutoff back before Management has decided on it, e.g. after spotting a
+ * wrong attendance entry. It becomes 'revision_needed', which unfreezes that period's
+ * attendance and re-enables Recompute Payroll.
+ */
+export async function reopenCutoffForCorrection(id: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('payroll_cutoffs')
+    .update({ status: 'revision_needed' })
+    .eq('id', id)
+    .eq('status', 'computed')
+    .select('id');
+  if (error) return dbError(error);
+  if (!data?.length) return noRowsAffected('Only a computed cutoff that is still waiting for Management can be sent back.');
+
+  revalidatePath(`/hr/payroll/${id}`);
+  revalidatePath('/hr/payroll');
+  revalidatePath('/hr/attendance');
+  return { success: true };
 }

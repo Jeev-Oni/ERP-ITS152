@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { itemUpdateSchema } from '@/lib/validations/master-data';
+import { dbError, noRowsAffected, type ActionResult } from './result';
 
 /** Item/SKU Master creation — Warehouse Supervisor (RLS: items_write_supervisor). */
 export async function createItem(input: {
@@ -9,10 +11,10 @@ export async function createItem(input: {
   name: string;
   unit: string;
   reorder_point?: number;
-}) {
+}): Promise<ActionResult> {
   const supabase = createClient();
   const { error } = await supabase.from('items').insert(input);
-  if (error) return { error: error.message };
+  if (error) return dbError(error, { duplicate: 'That SKU already exists.' });
 
   revalidatePath('/warehouse/items');
   return { success: true };
@@ -112,5 +114,70 @@ export async function resolveDiscrepancy(discrepancyId: string, resolutionNote: 
   if (statusError) return { error: statusError.message };
 
   revalidatePath('/warehouse/stock-movements');
+  return { success: true };
+}
+
+/**
+ * Edit Item/SKU master data — Warehouse Supervisor.
+ * current_balance is deliberately NOT editable here (nor at the DB level: column privileges
+ * only allow sku/name/unit/reorder_point). Balances change only through logged stock
+ * movements, so the ledger can never drift.
+ */
+export async function updateItem(id: string, input: unknown): Promise<ActionResult> {
+  const parsed = itemUpdateSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('items')
+    .update({
+      sku: parsed.data.sku,
+      name: parsed.data.name,
+      unit: parsed.data.unit,
+      reorder_point: parsed.data.reorder_point ?? null,
+    })
+    .eq('id', id)
+    .select('id');
+  if (error) return dbError(error, { duplicate: 'That SKU already exists.' });
+  if (!data?.length) return noRowsAffected();
+
+  revalidatePath('/warehouse/items');
+  return { success: true };
+}
+
+/** Delete an item with no stock and no movement history (FKs block the rest). */
+export async function deleteItem(id: string): Promise<ActionResult> {
+  const supabase = createClient();
+
+  const { data: item, error: fetchError } = await supabase.from('items').select('current_balance').eq('id', id).single();
+  if (fetchError || !item) return { error: fetchError?.message ?? 'Item not found' };
+  if (Number(item.current_balance) !== 0) {
+    return { error: 'This item still has stock on hand. Issue the remaining stock out before deleting it.' };
+  }
+
+  const { data, error } = await supabase.from('items').delete().eq('id', id).select('id');
+  if (error) return dbError(error, { inUse: 'This item has stock movement history, so it cannot be deleted.' });
+  if (!data?.length) return noRowsAffected();
+
+  revalidatePath('/warehouse/items');
+  return { success: true };
+}
+
+/**
+ * Delete a stock movement. If it already changed the item balance (any status other than
+ * 'pending'), a database trigger puts the balance back and refuses if that would make it
+ * negative. The deletion itself is recorded in audit_log. RLS: the Supervisor can delete any
+ * movement; Warehouse Staff only their own, and only until the Supervisor verifies it.
+ */
+export async function deleteStockMovement(id: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from('stock_movements').delete().eq('id', id).select('id');
+  if (error) return dbError(error); // the trigger's "would make the balance negative" message passes through
+  if (!data?.length) {
+    return noRowsAffected('Nothing was deleted. Staff can delete only their own entries, and only until the Supervisor verifies them.');
+  }
+
+  revalidatePath('/warehouse/stock-movements');
+  revalidatePath('/warehouse/items');
   return { success: true };
 }
