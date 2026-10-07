@@ -67,7 +67,7 @@ or DELETE does not raise an error.
 | Drivers | Fleet Supervisor | Fleet Supervisor (System Admin links the login) | Fleet Supervisor | Delete refused if trip history, use Deactivate |
 | Trips | Dispatcher | Dispatcher, only while `dispatched` | Dispatcher, only while `dispatched` | After departure a trip is audit trail; failed deliveries are rescheduled as a *new* trip |
 | Maintenance jobs | Fleet Supervisor | date change while `scheduled` | only when `cancelled` | Completed jobs are kept as maintenance history |
-| User accounts | System Admin | System Admin (name, role, department, active) | none (Deactivate) | Admins can't demote or deactivate themselves |
+| User accounts | System Admin | System Admin: name, email, role, department, password, active | none (Deactivate) | Admins can't demote or deactivate themselves. Deactivating blocks sign-in **and** revokes all data access (migration 0011) |
 
 ## Fixes bundled in migration 0009
 
@@ -86,3 +86,8 @@ These flows were silently blocked by RLS before (each returned 0 rows with no er
 - Warehouse Staff can edit an item's SKU/name/unit/reorder point. Adding and deleting items stays with the Supervisor, and `current_balance` is still untypeable by anyone.
 - Stock movements can be deleted (see matrix). `audit_log` gained a `detail` column so a deletion records what was removed.
 - Every screen that is view-only for the signed-in role now says so and names the role that can edit it.
+
+## Added in migration 0011
+
+- `current_app_role()` now returns NULL for an inactive profile, so a deactivated account loses access to every table at once. Before this, `is_active` was never checked anywhere.
+- The `profiles` admin policies no longer query `profiles` from inside a policy on `profiles` (Postgres rejects that as infinite recursion). They ask `current_app_role()` instead.

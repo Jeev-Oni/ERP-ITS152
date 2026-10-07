@@ -36,8 +36,14 @@ export async function updateSession(request: NextRequest) {
 		data: { user },
 	} = await supabase.auth.getUser();
 
-	// Redirect unauthenticated users to /login, except for the login page itself.
-	if (!user && !request.nextUrl.pathname.startsWith("/login")) {
+	// Pages that must work without a session: sign-in, the forgot-password request, the
+	// email-link callbacks, and /reset-password (which explains an expired link itself
+	// instead of bouncing to /login).
+	const publicPaths = ["/login", "/forgot-password", "/reset-password", "/auth/"];
+	const isPublic = publicPaths.some((p) => request.nextUrl.pathname.startsWith(p));
+
+	// Redirect unauthenticated users to /login, except for those pages.
+	if (!user && !isPublic) {
 		const url = request.nextUrl.clone();
 		url.pathname = "/login";
 		return NextResponse.redirect(url);

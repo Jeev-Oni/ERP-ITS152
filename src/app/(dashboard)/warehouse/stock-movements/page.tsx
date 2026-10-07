@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { RoleGate } from '@/components/shared/RoleGate';
 import { RecordMovementForm } from '@/components/warehouse/RecordMovementForm';
 import { StockMovementsTable } from '@/components/warehouse/StockMovementsTable';
@@ -21,7 +22,7 @@ export default async function StockMovementsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-foreground">Stock Movements</h1>
+      <PageHeader eyebrow="Warehouse Operations" title="Stock Movements" description="Every receipt and issue, logged once and then checked by the Supervisor." />
 
       <RoleGate currentRole={role as any} allow={['warehouse_staff']}>
         <RecordMovementForm items={(items as any) ?? []} />

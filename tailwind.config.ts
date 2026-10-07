@@ -5,6 +5,7 @@ const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      borderColor: { DEFAULT: 'hsl(var(--border))' },
       colors: {
         border: 'hsl(var(--border))',
         background: 'hsl(var(--background))',

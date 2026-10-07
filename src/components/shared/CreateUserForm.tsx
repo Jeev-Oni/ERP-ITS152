@@ -41,28 +41,28 @@ export function CreateUserForm() {
   }
 
   return (
-    <form ref={formRef} action={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4">
+    <form ref={formRef} action={handleSubmit} className="flex flex-wrap items-end gap-3 panel p-5">
       <div>
-        <label className="block text-xs text-muted-foreground">Full Name</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Full Name</label>
         <input name="full_name" required className="w-44 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Email</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Email</label>
         <input name="email" type="email" required className="w-52 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Temporary Password</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Temporary Password</label>
         <input name="password" type="password" minLength={8} required autoComplete="new-password" className="w-40 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Role</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Role</label>
         <select name="role" required defaultValue="" className="rounded px-2 py-1 text-sm">
           <option value="" disabled>Select…</option>
           {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Department</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Department</label>
         <select name="department" required defaultValue="" className="rounded px-2 py-1 text-sm">
           <option value="" disabled>Select…</option>
           {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}

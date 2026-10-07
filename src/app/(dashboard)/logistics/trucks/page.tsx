@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { hasRole } from '@/lib/roles';
 import { ReadOnlyNotice } from '@/components/shared/ReadOnlyNotice';
 import { CreateTruckForm } from '@/components/logistics/CreateTruckForm';
@@ -24,12 +25,13 @@ export default async function TrucksPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-foreground">Trucks</h1>
+      <PageHeader eyebrow="Delivery & Logistics" title="Trucks" description="The fleet, its maintenance dates, and scheduled service jobs." />
       {!canEdit && <ReadOnlyNotice role={profile?.role} who="Fleet Supervisor" />}
 
       {canEdit && <CreateTruckForm />}
 
-      <table className="w-full text-sm">
+      <div className="table-wrap">
+<table className="data-table">
         <thead>
           <tr className="border-b border-border text-left text-muted-foreground">
             <th className="py-2">Plate</th>
@@ -50,6 +52,7 @@ export default async function TrucksPage() {
           )}
         </tbody>
       </table>
+</div>
 
       {canEdit && (
         <div className="space-y-3">

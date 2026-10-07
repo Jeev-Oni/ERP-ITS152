@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { AlertTriangle, ArrowRight, CheckCircle2, Route, Truck, Wallet } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -170,64 +171,117 @@ export default async function DashboardHome() {
 
   const quickLinks = (role && QUICK_LINKS[role]) || [];
 
-  return (
-    <div className="space-y-10">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Welcome, {profile?.full_name ?? 'there'}</h1>
-        <p className="text-sm text-muted-foreground">
-          {ROLE_LABELS[role ?? ''] ?? role} {'\u00b7'} {DEPARTMENT_LABELS[profile?.department ?? ''] ?? profile?.department}
-        </p>
-      </div>
+  // Greeting and date use the company's timezone, not the server's.
+  const TZ = 'Asia/Manila';
+  const hour = Number(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: TZ }));
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: TZ });
+  const firstName = (profile?.full_name ?? '').split(' ')[0] || 'there';
 
-      <section>
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-primary">At a Glance</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {stats.map((stat) => (
-            <div key={stat.label} className="rounded border border-border bg-surface p-4">
-              <p className="text-2xl font-semibold text-primary">{stat.value}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{stat.label}</p>
-            </div>
-          ))}
+  const statIcons = [Wallet, AlertTriangle, Route, Truck];
+  const SECTION = 'mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground';
+
+  return (
+    <div className="space-y-9">
+      {/* Welcome hero: same rings-and-glow language as the sign-in screen */}
+      <section className="panel relative overflow-hidden p-8">
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{ backgroundImage: 'radial-gradient(520px 260px at 92% 0%, hsl(41 47% 56% / 0.12), transparent 65%)' }}
+        />
+        <div aria-hidden className="absolute -right-24 -top-28 h-80 w-80 rounded-full border border-primary/10" />
+        <div aria-hidden className="absolute -right-4 -top-12 h-44 w-44 rounded-full border border-primary/15" />
+        <div className="relative">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{dateLabel}</p>
+          <h1 className="text-3xl font-light tracking-tight text-foreground">
+            {greeting}, <span className="font-medium">{firstName}.</span>
+          </h1>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary">
+              {ROLE_LABELS[role ?? ''] ?? role}
+            </span>
+            <span className="rounded-full border border-border bg-background/40 px-3 py-1 text-xs text-muted">
+              {DEPARTMENT_LABELS[profile?.department ?? ''] ?? profile?.department}
+            </span>
+          </div>
         </div>
       </section>
 
       <section>
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-primary">Needs Your Attention</p>
-        {attention.length === 0 ? (
-          <div className="rounded border border-border bg-surface p-4 text-sm text-muted-foreground">
-            You&rsquo;re all caught up here.
-          </div>
-        ) : (
-          <ul className="divide-y divide-border rounded border border-border bg-surface">
-            {attention.map((item) => (
-              <li key={item.label}>
-                <Link
-                  href={item.href}
-                  className="flex items-center justify-between px-4 py-3 text-sm text-foreground transition-colors hover:bg-surface-hover"
-                >
-                  {item.label}
-                  <span className="text-primary">&rarr;</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <p className={SECTION}>At a glance</p>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {stats.map((stat, i) => {
+            const Icon = statIcons[i];
+            const alert = stat.label === 'Unresolved Discrepancies' && stat.value > 0;
+            return (
+              <div key={stat.label} className="panel p-5 transition-colors hover:border-primary/40">
+                <div className="mb-4 flex items-center justify-between">
+                  <span
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg border ${
+                      alert ? 'border-red-400/30 bg-red-400/10' : 'border-primary/25 bg-accent'
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 ${alert ? 'text-red-300' : 'text-primary'}`} />
+                  </span>
+                </div>
+                <p className={`text-3xl font-semibold tracking-tight ${alert ? 'text-red-300' : 'text-foreground'}`}>
+                  {stat.value}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">{stat.label}</p>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
-      {quickLinks.length > 0 && (
-        <section>
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-primary">Quick Links</p>
-          <ul className="space-y-2">
-            {quickLinks.map((link) => (
-              <li key={link.href}>
-                <Link href={link.href} className="text-sm text-muted underline decoration-border underline-offset-4 hover:text-primary">
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
+      <div className="grid gap-9 lg:grid-cols-5">
+        <section className="lg:col-span-3">
+          <p className={SECTION}>Needs your attention</p>
+          {attention.length === 0 ? (
+            <div className="panel flex items-center gap-3 p-5 text-sm text-muted">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-300" />
+              You&rsquo;re all caught up here. Nothing is waiting on you.
+            </div>
+          ) : (
+            <ul className="panel divide-y divide-border overflow-hidden">
+              {attention.map((item) => (
+                <li key={item.label}>
+                  <Link
+                    href={item.href}
+                    className="group flex items-center justify-between gap-4 px-5 py-4 text-sm text-foreground transition-colors hover:bg-surface-hover/40"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+                      {item.label}
+                    </span>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
-      )}
+
+        {quickLinks.length > 0 && (
+          <section className="lg:col-span-2">
+            <p className={SECTION}>Quick links</p>
+            <ul className="space-y-3">
+              {quickLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="panel group flex items-center justify-between gap-4 px-5 py-4 text-sm text-foreground transition-colors hover:border-primary/40"
+                  >
+                    {link.label}
+                    <ArrowRight className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { createClient } from '@/lib/supabase/server';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 
@@ -24,8 +25,17 @@ export default async function TripsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-foreground">{role === 'driver' ? 'Your Trips' : 'Trips'}</h1>
-      <table className="w-full text-sm">
+      <PageHeader
+        eyebrow="Delivery & Logistics"
+        title={role === 'driver' ? 'Your Trips' : 'Trips'}
+        description={
+          role === 'driver'
+            ? 'Trips assigned to you. Start a trip, then confirm each delivery on site.'
+            : 'Every trip from dispatch to delivery confirmation and close-out.'
+        }
+      />
+      <div className="table-wrap">
+<table className="data-table">
         <thead>
           <tr className="border-b border-border text-left text-muted-foreground">
             <th className="py-2">Client</th>
@@ -52,6 +62,7 @@ export default async function TripsPage() {
           )}
         </tbody>
       </table>
+</div>
     </div>
   );
 }

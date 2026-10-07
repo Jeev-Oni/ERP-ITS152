@@ -23,13 +23,13 @@ export function CreateCutoffForm() {
   }
 
   return (
-    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-lg border p-4">
+    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 panel p-5">
       <div>
-        <label className="block text-xs text-muted-foreground">Period Start</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Period Start</label>
         <input type="date" name="period_start" required className="rounded border px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Period End</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Period End</label>
         <input type="date" name="period_end" required className="rounded border px-2 py-1 text-sm" />
       </div>
       <button type="submit" disabled={pending} className="rounded bg-primary px-4 py-1.5 text-sm text-primary-foreground">

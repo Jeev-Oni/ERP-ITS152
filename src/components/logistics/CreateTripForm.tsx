@@ -28,9 +28,9 @@ export function CreateTripForm({ trucks, drivers }: { trucks: Truck[]; drivers: 
   }
 
   return (
-    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4">
+    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 panel p-5">
       <div>
-        <label className="block text-xs text-muted-foreground">Truck</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Truck</label>
         <select name="truck_id" required className="w-32 rounded px-2 py-1 text-sm">
           {trucks.map((t) => (
             <option key={t.id} value={t.id}>{t.plate_number}</option>
@@ -38,7 +38,7 @@ export function CreateTripForm({ trucks, drivers }: { trucks: Truck[]; drivers: 
         </select>
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Driver</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Driver</label>
         <select name="driver_id" required className="w-40 rounded px-2 py-1 text-sm">
           {drivers.map((d) => (
             <option key={d.id} value={d.id}>{d.full_name}</option>
@@ -46,11 +46,11 @@ export function CreateTripForm({ trucks, drivers }: { trucks: Truck[]; drivers: 
         </select>
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Client</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Client</label>
         <input name="client_name" required className="w-40 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Destination</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Destination</label>
         <input name="destination_address" required className="w-56 rounded px-2 py-1 text-sm" />
       </div>
       <button type="submit" disabled={pending} className="rounded bg-primary px-4 py-1.5 text-sm text-primary-foreground">

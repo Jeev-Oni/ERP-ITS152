@@ -24,9 +24,9 @@ export function AttendanceForm({ employees }: { employees: { id: string; full_na
   }
 
   return (
-    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-lg border p-4">
+    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 panel p-5">
       <div>
-        <label className="block text-xs text-muted-foreground">Employee</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Employee</label>
         <select name="employee_id" required className="rounded border px-2 py-1 text-sm">
           {employees.map((emp) => (
             <option key={emp.id} value={emp.id}>{emp.full_name}</option>
@@ -34,19 +34,19 @@ export function AttendanceForm({ employees }: { employees: { id: string; full_na
         </select>
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Date</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Date</label>
         <input type="date" name="log_date" required className="rounded border px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Time In</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Time In</label>
         <input type="time" name="time_in" className="rounded border px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Time Out</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Time Out</label>
         <input type="time" name="time_out" className="rounded border px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Hours</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Hours</label>
         <input type="number" step="0.5" name="hours_worked" required className="w-20 rounded border px-2 py-1 text-sm" />
       </div>
       <button type="submit" disabled={pending} className="rounded bg-primary px-4 py-1.5 text-sm text-primary-foreground">

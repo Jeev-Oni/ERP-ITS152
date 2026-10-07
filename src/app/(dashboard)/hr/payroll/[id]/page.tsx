@@ -7,6 +7,8 @@ import { PayrollApprovalPanel } from '@/components/hr/PayrollApprovalPanel';
 import { DisbursementPanel } from '@/components/hr/DisbursementPanel';
 import { GeneratePayslipsButton } from '@/components/hr/GeneratePayslipsButton';
 import { PayrollProgress } from '@/components/hr/PayrollProgress';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { BackLink } from '@/components/shared/BackLink';
 
 // One payroll_cutoffs row end to end: compute -> approve/revise -> disburse -> payslips.
 // This page is the full state machine described in docs/process-flows/salary-distribution.md.
@@ -32,12 +34,12 @@ export default async function PayrollCutoffDetailPage({ params }: { params: { id
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <BackLink href="/hr/payroll" label="Back to Payroll" />
+
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">
-            Cutoff: {cutoff.period_start} → {cutoff.period_end}
-          </h1>
-          <StatusBadge status={cutoff.status} />
+          <PageHeader eyebrow="Payroll cutoff" title={`${cutoff.period_start} → ${cutoff.period_end}`} />
+          <div className="mt-3"><StatusBadge status={cutoff.status} /></div>
         </div>
         <CutoffActions cutoffId={cutoff.id} status={cutoff.status} currentRole={role} />
       </div>
@@ -55,7 +57,7 @@ export default async function PayrollCutoffDetailPage({ params }: { params: { id
       </RoleGate>
 
       {approvals && approvals.length > 0 && (
-        <div className="rounded-lg border p-4 text-sm">
+        <div className="panel p-5 text-sm">
           <p className="mb-2 font-medium">Approval history</p>
           <ul className="space-y-1">
             {approvals.map((a: any) => (

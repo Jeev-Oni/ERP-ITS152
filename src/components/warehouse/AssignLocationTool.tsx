@@ -44,10 +44,10 @@ export function AssignLocationTool({ items, bins }: { items: Item[]; bins: Bin[]
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
+    <div className="space-y-3 panel p-5">
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-xs text-muted-foreground">Item</label>
+          <label className="mb-1 block text-xs text-muted-foreground">Item</label>
           <select
             value={itemId}
             onChange={(e) => handleItemChange(e.target.value)}
@@ -62,7 +62,7 @@ export function AssignLocationTool({ items, bins }: { items: Item[]; bins: Bin[]
         {itemId && (
           <>
             <div>
-              <label className="block text-xs text-muted-foreground">Assign / Move to Bin</label>
+              <label className="mb-1 block text-xs text-muted-foreground">Assign / Move to Bin</label>
               <select value={binId} onChange={(e) => setBinId(e.target.value)} className="w-40 rounded px-2 py-1 text-sm">
                 <option value="">Select a bin…</option>
                 {bins.map((bin) => (

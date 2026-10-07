@@ -18,9 +18,9 @@ export function ScheduleMaintenanceForm({ trucks }: { trucks: Truck[] }) {
   }
 
   return (
-    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4">
+    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 panel p-5">
       <div>
-        <label className="block text-xs text-muted-foreground">Truck</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Truck</label>
         <select name="truck_id" required className="w-36 rounded px-2 py-1 text-sm">
           {trucks.map((t) => (
             <option key={t.id} value={t.id}>{t.plate_number}</option>
@@ -28,7 +28,7 @@ export function ScheduleMaintenanceForm({ trucks }: { trucks: Truck[] }) {
         </select>
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Date</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Date</label>
         <input name="scheduled_date" type="date" required className="rounded px-2 py-1 text-sm" />
       </div>
       <button type="submit" disabled={pending} className="rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-hover">

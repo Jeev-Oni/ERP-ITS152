@@ -18,9 +18,9 @@ export default async function PayslipDetailPage({ params }: { params: { id: stri
   const cutoff = comp?.payroll_cutoffs;
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 rounded-lg border p-6 print:border-none">
+    <div className="panel mx-auto max-w-lg space-y-4 p-7 print:border-none">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">JJPG Trading — Payslip</h1>
+        <h1 className="text-lg font-semibold tracking-tight text-foreground">JJPG Trading — Payslip</h1>
         <PrintButton />
       </div>
       <div className="text-sm">
@@ -34,7 +34,7 @@ export default async function PayslipDetailPage({ params }: { params: { id: stri
           <tr className="border-b"><td className="py-1">Overtime Hours</td><td className="text-right">{comp?.overtime_hours}</td></tr>
           <tr className="border-b"><td className="py-1">Gross Pay</td><td className="text-right">₱{Number(comp?.gross_pay ?? 0).toFixed(2)}</td></tr>
           <tr className="border-b"><td className="py-1">Deductions</td><td className="text-right">₱{Number(comp?.deductions ?? 0).toFixed(2)}</td></tr>
-          <tr><td className="py-1 font-semibold">Net Pay</td><td className="text-right font-semibold">₱{Number(comp?.net_pay ?? 0).toFixed(2)}</td></tr>
+          <tr><td className="py-2 font-semibold text-foreground">Net Pay</td><td className="text-right text-lg font-semibold text-primary">₱{Number(comp?.net_pay ?? 0).toFixed(2)}</td></tr>
         </tbody>
       </table>
       <p className="text-xs text-muted-foreground">Generated {new Date(payslip.generated_at).toLocaleString()}</p>

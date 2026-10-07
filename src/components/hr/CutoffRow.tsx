@@ -27,7 +27,7 @@ export function CutoffRow({
         <>
           <td><StatusBadge status={cutoff.status} /></td>
           <td>
-            <Link href={`/hr/payroll/${cutoff.id}`} className="text-sm text-blue-600 underline">Open</Link>
+            <Link href={`/hr/payroll/${cutoff.id}`} className="text-sm text-primary underline-offset-4 hover:underline">Open</Link>
           </td>
         </>
       }

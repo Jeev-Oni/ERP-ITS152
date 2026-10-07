@@ -30,25 +30,25 @@ export function CreateEmployeeForm() {
   }
 
   return (
-    <form ref={formRef} action={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4">
+    <form ref={formRef} action={handleSubmit} className="flex flex-wrap items-end gap-3 panel p-5">
       <div>
-        <label className="block text-xs text-muted-foreground">Employee Code</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Employee Code</label>
         <input name="employee_code" required placeholder="EMP-003" className="w-28 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Full Name</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Full Name</label>
         <input name="full_name" required className="w-48 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Position</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Position</label>
         <input name="position" placeholder="Warehouse Staff" className="w-40 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Daily Rate</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Daily Rate</label>
         <input name="daily_rate" type="number" step="0.01" min="0" required className="w-28 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Bank Account No.</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Bank Account No.</label>
         <input name="bank_account_number" className="w-40 rounded px-2 py-1 text-sm" />
       </div>
       <button type="submit" disabled={pending} className="rounded bg-primary px-4 py-1.5 text-sm text-primary-foreground">

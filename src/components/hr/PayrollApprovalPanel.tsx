@@ -26,7 +26,7 @@ export function PayrollApprovalPanel({ cutoffId }: { cutoffId: string }) {
   }
 
   return (
-    <div className="rounded-lg border p-4">
+    <div className="panel p-5">
       <p className="mb-2 font-medium">Management Approval</p>
       <textarea
         placeholder="Reason (required if sending back for revision)"

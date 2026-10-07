@@ -46,7 +46,7 @@ export function PayrollProgress({ status, role }: { status: string; role: string
   const waitingFor = next?.roles.map(roleLabel).join(' or ');
 
   return (
-    <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
+    <div className="space-y-3 panel p-5">
       <ol className="flex flex-wrap gap-x-6 gap-y-3">
         {STEPS.map((step, i) => {
           const done = i < current || status === 'disbursed';

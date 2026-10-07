@@ -24,17 +24,17 @@ export function CreateStorageLocationForm() {
   }
 
   return (
-    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4">
+    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 panel p-5">
       <div>
-        <label className="block text-xs text-muted-foreground">Bin Code</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Bin Code</label>
         <input name="bin_code" required placeholder="A1-03" className="w-28 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Zone</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Zone</label>
         <input name="zone" placeholder="Zone A" className="w-28 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Capacity</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Capacity</label>
         <input name="capacity" type="number" step="0.01" className="w-28 rounded px-2 py-1 text-sm" />
       </div>
       <button type="submit" disabled={pending} className="rounded bg-primary px-4 py-1.5 text-sm text-primary-foreground">

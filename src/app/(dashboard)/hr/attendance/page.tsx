@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { hasRole } from '@/lib/roles';
 import { AttendanceForm } from '@/components/hr/AttendanceForm';
 import { AttendanceRow } from '@/components/hr/AttendanceRow';
@@ -34,10 +35,11 @@ export default async function AttendancePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Attendance</h1>
+      <PageHeader eyebrow="HR & Administration" title="Attendance" description="Daily time records that feed payroll. Entries lock once payroll for their period is computed." />
       {!canEdit && <ReadOnlyNotice role={role} who="Admin Staff and HR / Payroll Officer" />}
       {canEdit && <AttendanceForm employees={activeEmployees} />}
-      <table className="w-full text-sm">
+      <div className="table-wrap">
+<table className="data-table">
         <thead>
           <tr className="border-b text-left text-muted-foreground">
             <th className="py-2">Employee</th>
@@ -63,6 +65,7 @@ export default async function AttendancePage() {
           )}
         </tbody>
       </table>
+</div>
       {canEdit && (
         <p className="text-xs text-muted-foreground">
           Entries inside a period whose payroll is already computed are locked. HR can unlock a period with

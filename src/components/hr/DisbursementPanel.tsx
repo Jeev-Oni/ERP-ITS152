@@ -24,7 +24,7 @@ export function DisbursementPanel({ cutoffId }: { cutoffId: string }) {
   }
 
   return (
-    <div className="rounded-lg border p-4">
+    <div className="panel p-5">
       <p className="mb-2 font-medium">Disburse Pay via Bank Transfer</p>
       <input
         placeholder="Bank reference (optional)"

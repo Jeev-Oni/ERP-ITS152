@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { hasRole } from '@/lib/roles';
 import { ReadOnlyNotice } from '@/components/shared/ReadOnlyNotice';
 import { CreateDriverForm } from '@/components/logistics/CreateDriverForm';
@@ -25,12 +26,13 @@ export default async function DriversPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-foreground">Drivers</h1>
+      <PageHeader eyebrow="Delivery & Logistics" title="Drivers" description="The driver roster. Link each driver to a login so they can see their own trips." />
       {!canEdit && <ReadOnlyNotice role={role} who="Fleet Supervisor" />}
 
       {canEdit && <CreateDriverForm />}
 
-      <table className="w-full text-sm">
+      <div className="table-wrap">
+<table className="data-table">
         <thead>
           <tr className="border-b border-border text-left text-muted-foreground">
             <th className="py-2">Name</th>
@@ -49,6 +51,7 @@ export default async function DriversPage() {
           )}
         </tbody>
       </table>
+</div>
       {role === 'system_admin' && (
         <p className="text-xs text-muted-foreground">
           Link each driver to their login so they can see and update their own trips.

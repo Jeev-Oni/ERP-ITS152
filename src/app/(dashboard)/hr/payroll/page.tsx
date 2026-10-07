@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { hasRole } from '@/lib/roles';
 import { ReadOnlyNotice } from '@/components/shared/ReadOnlyNotice';
 import { CreateCutoffForm } from '@/components/hr/CreateCutoffForm';
@@ -18,12 +19,13 @@ export default async function PayrollPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Payroll</h1>
+      <PageHeader eyebrow="HR & Administration" title="Payroll" description="Each cutoff is one pay period, handed from HR to Management to Finance." />
       {!canEdit && <ReadOnlyNotice role={profile?.role} who="HR / Payroll Officer" />}
 
       {canEdit && <CreateCutoffForm />}
 
-      <table className="w-full text-sm">
+      <div className="table-wrap">
+<table className="data-table">
         <thead>
           <tr className="border-b text-left text-muted-foreground">
             <th className="py-2">Period Start</th>
@@ -42,6 +44,7 @@ export default async function PayrollPage() {
           )}
         </tbody>
       </table>
+</div>
     </div>
   );
 }

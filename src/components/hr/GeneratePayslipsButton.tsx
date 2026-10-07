@@ -21,7 +21,7 @@ export function GeneratePayslipsButton({ cutoffId }: { cutoffId: string }) {
   }
 
   return (
-    <div className="rounded-lg border p-4">
+    <div className="panel p-5">
       <button
         onClick={handleGenerate}
         disabled={pending}

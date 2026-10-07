@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { BackLink } from '@/components/shared/BackLink';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { TripActions } from '@/components/logistics/TripActions';
 
 // One trip end to end: dispatched -> en_route -> delivered/delivery_failed -> closed,
@@ -31,13 +32,14 @@ export default async function TripDetailPage({ params }: { params: { id: string 
     <div className="space-y-6">
       <BackLink href="/logistics/trips" label="Back to Trips" />
 
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">{trip.client_name}</h1>
-        <p className="text-sm text-muted-foreground">{trip.destination_address}</p>
-        <div className="mt-2"><StatusBadge status={trip.status} /></div>
-      </div>
+      <PageHeader
+        eyebrow="Trip"
+        title={trip.client_name}
+        description={trip.destination_address}
+        actions={<StatusBadge status={trip.status} />}
+      />
 
-      <div className="grid grid-cols-2 gap-4 rounded-lg border border-border bg-surface p-4 text-sm sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 panel p-5 text-sm sm:grid-cols-4">
         <div>
           <p className="text-xs text-muted-foreground">Truck</p>
           <p className="text-foreground">{(trip as any).trucks?.plate_number ?? '—'}</p>
@@ -66,7 +68,7 @@ export default async function TripDetailPage({ params }: { params: { id: string 
       />
 
       {confirmations && confirmations.length > 0 && (
-        <div className="rounded-lg border border-border bg-surface p-4 text-sm">
+        <div className="panel p-5 text-sm">
           <p className="mb-2 font-medium text-foreground">Delivery Confirmation History</p>
           <ul className="space-y-1 text-muted-foreground">
             {confirmations.map((c) => (

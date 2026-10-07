@@ -75,7 +75,8 @@ function JobRow({ job }: { job: Job }) {
 
 export function MaintenanceList({ jobs }: { jobs: Job[] }) {
   return (
-    <table className="w-full text-sm">
+    <div className="table-wrap">
+<table className="data-table">
       <thead>
         <tr className="border-b border-border text-left text-muted-foreground">
           <th className="py-2">Truck</th>
@@ -91,5 +92,6 @@ export function MaintenanceList({ jobs }: { jobs: Job[] }) {
         )}
       </tbody>
     </table>
+</div>
   );
 }

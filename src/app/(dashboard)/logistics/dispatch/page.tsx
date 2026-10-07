@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { hasRole } from '@/lib/roles';
 import { ReadOnlyNotice } from '@/components/shared/ReadOnlyNotice';
 import { CreateTripForm } from '@/components/logistics/CreateTripForm';
@@ -21,7 +22,7 @@ export default async function DispatchPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-foreground">Dispatch</h1>
+      <PageHeader eyebrow="Delivery & Logistics" title="Dispatch" description="Plan trips, assign a truck and driver, and reschedule failed deliveries." />
       {!canEdit && <ReadOnlyNotice role={profile?.role} who="Dispatcher" />}
 
       {canEdit && <CreateTripForm trucks={(trucks as any) ?? []} drivers={(drivers as any) ?? []} />}

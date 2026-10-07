@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { hasRole } from '@/lib/roles';
 import { CreateItemForm } from '@/components/warehouse/CreateItemForm';
 import { ItemRow } from '@/components/warehouse/ItemRow';
@@ -18,12 +19,13 @@ export default async function ItemsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-foreground">Item / SKU Master</h1>
+      <PageHeader eyebrow="Warehouse Operations" title="Item / SKU Master" description="Every item the warehouse handles, with its live stock balance." />
       {!canEdit && <ReadOnlyNotice role={role} who="Warehouse Staff and Warehouse Supervisor" />}
 
       {canManage && <CreateItemForm />}
 
-      <table className="w-full text-sm">
+      <div className="table-wrap">
+<table className="data-table">
         <thead>
           <tr className="border-b border-border text-left text-muted-foreground">
             <th className="py-2">SKU</th>
@@ -43,6 +45,7 @@ export default async function ItemsPage() {
           )}
         </tbody>
       </table>
+</div>
       {canEdit && (
         <p className="text-xs text-muted-foreground">
           Balances can&apos;t be typed in. They change only when a stock movement is logged (or deleted), which keeps the ledger accurate. Adding and deleting items is done by the Warehouse Supervisor.

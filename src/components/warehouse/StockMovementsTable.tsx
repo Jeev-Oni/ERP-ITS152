@@ -41,7 +41,7 @@ function VerifyControl({ movementId }: { movementId: string }) {
         placeholder="Physical count"
         value={count}
         onChange={(e) => setCount(e.target.value)}
-        className="w-28 rounded px-1.5 py-0.5 text-xs"
+        className="w-36 rounded px-1.5 py-0.5 text-xs"
       />
       <button onClick={handleVerify} disabled={pending || !count} className="rounded border border-border px-2 py-0.5 text-xs hover:bg-surface-hover">
         Verify
@@ -110,7 +110,8 @@ export function StockMovementsTable({ movements, role, userId }: { movements: Mo
     isSupervisor || (role === 'warehouse_staff' && m.logged_by === userId && ['pending', 'logged'].includes(m.status));
 
   return (
-    <table className="w-full text-sm">
+    <div className="table-wrap">
+<table className="data-table">
       <thead>
         <tr className="border-b border-border text-left text-muted-foreground">
           <th className="py-2">Item</th>
@@ -150,5 +151,6 @@ export function StockMovementsTable({ movements, role, userId }: { movements: Mo
         )}
       </tbody>
     </table>
+</div>
   );
 }

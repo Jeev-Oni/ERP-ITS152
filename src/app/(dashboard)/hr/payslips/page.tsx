@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { createClient } from '@/lib/supabase/server';
 
 // "Generate Digital Payslip" output — every payslip ever generated, newest first.
@@ -11,8 +12,9 @@ export default async function PayslipsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Payslips</h1>
-      <table className="w-full text-sm">
+      <PageHeader eyebrow="HR & Administration" title="Payslips" description="Every digital payslip generated from an approved payroll cutoff." />
+      <div className="table-wrap">
+<table className="data-table">
         <thead>
           <tr className="border-b text-left text-muted-foreground">
             <th className="py-2">Employee</th>
@@ -32,7 +34,7 @@ export default async function PayslipsPage() {
               <td>₱{Number(p.payroll_computations?.net_pay ?? 0).toFixed(2)}</td>
               <td>{new Date(p.generated_at).toLocaleDateString()}</td>
               <td>
-                <Link href={`/hr/payslips/${p.id}`} className="text-blue-600 underline">
+                <Link href={`/hr/payslips/${p.id}`} className="text-primary underline-offset-4 hover:underline">
                   View
                 </Link>
               </td>
@@ -43,6 +45,7 @@ export default async function PayslipsPage() {
           )}
         </tbody>
       </table>
+</div>
     </div>
   );
 }

@@ -26,21 +26,21 @@ export function CreateItemForm() {
   }
 
   return (
-    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4">
+    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 panel p-5">
       <div>
-        <label className="block text-xs text-muted-foreground">SKU</label>
+        <label className="mb-1 block text-xs text-muted-foreground">SKU</label>
         <input name="sku" required placeholder="CORN-002" className="w-32 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Name</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Name</label>
         <input name="name" required placeholder="Yellow Corn" className="w-48 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Unit</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Unit</label>
         <input name="unit" required placeholder="kg" className="w-20 rounded px-2 py-1 text-sm" />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground">Reorder Point</label>
+        <label className="mb-1 block text-xs text-muted-foreground">Reorder Point</label>
         <input name="reorder_point" type="number" step="0.01" className="w-28 rounded px-2 py-1 text-sm" />
       </div>
       <button type="submit" disabled={pending} className="rounded bg-primary px-4 py-1.5 text-sm text-primary-foreground">

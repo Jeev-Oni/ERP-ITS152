@@ -47,7 +47,8 @@ export function PayrollComputationsTable({
   }
 
   return (
-    <table className="w-full text-sm">
+    <div className="table-wrap">
+<table className="data-table">
       <thead>
         <tr className="border-b text-left text-muted-foreground">
           <th className="py-2">Employee</th>
@@ -87,5 +88,6 @@ export function PayrollComputationsTable({
         ))}
       </tbody>
     </table>
+</div>
   );
 }

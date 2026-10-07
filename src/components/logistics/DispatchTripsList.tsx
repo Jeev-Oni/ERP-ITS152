@@ -87,7 +87,8 @@ export function DispatchTripsList({ trips, canEdit, trucks, drivers }: {
   trips: Trip[]; canEdit: boolean; trucks: Option[]; drivers: Option[];
 }) {
   return (
-    <table className="w-full text-sm">
+    <div className="table-wrap">
+<table className="data-table">
       <thead>
         <tr className="border-b border-border text-left text-muted-foreground">
           <th className="py-2">Client</th>
@@ -107,5 +108,6 @@ export function DispatchTripsList({ trips, canEdit, trucks, drivers }: {
         )}
       </tbody>
     </table>
+</div>
   );
 }

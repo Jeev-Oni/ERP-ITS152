@@ -101,7 +101,7 @@ export function TripActions({
   if (actions.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-4">
+    <div className="flex flex-wrap items-center gap-2 panel p-5">
       {actions}
       {message && <p className="w-full text-sm text-muted-foreground">{message}</p>}
     </div>

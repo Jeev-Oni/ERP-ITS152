@@ -60,16 +60,19 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
       <Link
         href={href}
         className={cn(
-          'flex items-center gap-2.5 rounded px-2.5 py-1.5 text-sm transition-colors',
-          active ? 'bg-accent text-primary' : 'text-muted hover:bg-surface-hover hover:text-foreground'
+          'relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
+          active ? 'bg-primary/10 font-medium text-primary' : 'text-muted hover:bg-surface-hover/60 hover:text-foreground'
         )}
       >
+        {active && <span aria-hidden className="absolute bottom-2 left-0 top-2 w-0.5 rounded-full bg-primary" />}
         <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-primary' : 'text-muted-foreground')} />
         {label}
       </Link>
     </li>
   );
 }
+
+const SECTION_LABEL = 'mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground';
 
 export function SidebarNav({ isSystemAdmin }: { isSystemAdmin: boolean }) {
   const pathname = usePathname();
@@ -86,7 +89,7 @@ export function SidebarNav({ isSystemAdmin }: { isSystemAdmin: boolean }) {
 
       {NAV.map((group) => (
         <div key={group.section} className="mb-6">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-primary">{group.section}</p>
+          <p className={SECTION_LABEL}>{group.section}</p>
           <ul className="space-y-0.5">
             {group.links.map((link) => (
               <NavLink key={link.href} {...link} active={isActive(pathname, link.href)} />
@@ -97,7 +100,7 @@ export function SidebarNav({ isSystemAdmin }: { isSystemAdmin: boolean }) {
 
       {isSystemAdmin && (
         <div className="mb-6">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-primary">Admin</p>
+          <p className={SECTION_LABEL}>Admin</p>
           <ul className="space-y-0.5">
             <NavLink href="/admin/users" label="User Management" icon={Users} active={isActive(pathname, '/admin/users')} />
           </ul>

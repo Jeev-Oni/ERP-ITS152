@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { hasRole } from '@/lib/roles';
 import { ReadOnlyNotice } from '@/components/shared/ReadOnlyNotice';
 import { CreateEmployeeForm } from '@/components/hr/CreateEmployeeForm';
@@ -17,12 +18,13 @@ export default async function EmployeesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-foreground">Employees</h1>
+      <PageHeader eyebrow="HR & Administration" title="Employees" description="The Employee Master that payroll is built on. Deactivate people who leave rather than deleting them, so their history is kept." />
       {!canEdit && <ReadOnlyNotice role={role} who="HR / Payroll Officer" />}
 
       {canEdit && <CreateEmployeeForm />}
 
-      <table className="w-full text-sm">
+      <div className="table-wrap">
+<table className="data-table">
         <thead>
           <tr className="border-b border-border text-left text-muted-foreground">
             <th className="py-2">Code</th>
@@ -43,6 +45,7 @@ export default async function EmployeesPage() {
           )}
         </tbody>
       </table>
+</div>
     </div>
   );
 }
