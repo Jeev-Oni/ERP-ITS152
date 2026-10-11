@@ -16,7 +16,7 @@ export default async function AttendancePage() {
   // employee_directory (migration 0009) exposes only id/code/name/active, so Admin Staff can
   // pick an employee without ever seeing pay rates or bank accounts. (They have no read
   // access to the employees table itself, which is why the old dropdown was empty for them.)
-  const { data: directory } = await supabase.from('employee_directory').select('id, full_name, is_active');
+  const { data: directory, error: directoryError } = await supabase.from('employee_directory').select('id, full_name, is_active');
   const names = new Map((directory ?? []).map((e: any) => [e.id, e.full_name as string]));
   const activeEmployees = (directory ?? []).filter((e: any) => e.is_active).map((e: any) => ({ id: e.id, full_name: e.full_name }));
 
@@ -33,9 +33,24 @@ export default async function AttendancePage() {
       (p) => date >= p.period_start && date <= p.period_end
     );
 
+  // The employee list and every name in the table come from this one lookup. If it fails or
+  // comes back empty, the dropdown is blank and rows read "Unknown", so say so out loud
+  // instead of failing silently.
+  const directoryProblem = directoryError
+    ? `The employee list could not be loaded (${directoryError.message}).`
+    : (directory ?? []).length === 0
+      ? 'The employee list came back empty.'
+      : null;
+
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="HR & Administration" title="Attendance" description="Daily time records that feed payroll. Entries lock once payroll for their period is computed." />
+      {directoryProblem && (
+        <p className="rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-xs text-red-300">
+          {directoryProblem} Employee names will show as &ldquo;Unknown&rdquo; and attendance can&apos;t be logged until
+          this is fixed. Check that migration 0009 (the employee_directory view) has been applied to this Supabase project.
+        </p>
+      )}
       {!canEdit && <ReadOnlyNotice role={role} who="Admin Staff and HR / Payroll Officer" />}
       {canEdit && <AttendanceForm employees={activeEmployees} />}
       <div className="table-wrap">

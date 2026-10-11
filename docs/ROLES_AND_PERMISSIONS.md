@@ -91,3 +91,31 @@ These flows were silently blocked by RLS before (each returned 0 rows with no er
 
 - `current_app_role()` now returns NULL for an inactive profile, so a deactivated account loses access to every table at once. Before this, `is_active` was never checked anywhere.
 - The `profiles` admin policies no longer query `profiles` from inside a policy on `profiles` (Postgres rejects that as infinite recursion). They ask `current_app_role()` instead.
+
+## Navigation & route access (UI layer)
+
+A role only sees, and can only open, the modules it **manages** (a task on the BPMN flow, or
+write access in the CRUD matrix above). Read-only access that RLS happens to allow is
+deliberately not surfaced. The whole map lives in `src/lib/access.ts` and drives:
+
+- the **sidebar** (links the role can't open are hidden; empty sections disappear),
+- the **route guard** in `src/lib/supabase/middleware.ts` (a typed URL or old bookmark to another
+  role's module redirects to the dashboard with a short notice; unlisted pages under `/hr`,
+  `/warehouse`, `/logistics`, `/admin` are denied until listed),
+- the dashboard's **At a glance** cards (`STAT_ACCESS`), so a role never sees a card for a table
+  it can't read.
+
+| Role | Sees in the sidebar |
+|---|---|
+| Admin Staff | Attendance |
+| HR / Payroll Officer | Employees, Attendance, Payroll, Payslips |
+| Management | Payroll |
+| Finance | Payroll |
+| Warehouse Staff / Supervisor | Item / SKU Master, Stock Movements, Storage Locations |
+| Dispatcher | Dispatch, Trips |
+| Driver | Trips (own trips only) |
+| Fleet Supervisor | Trips, Trucks, Drivers |
+| System Admin | Everything, plus User Management |
+
+To give a role another page, add the role to that page's entry in `ROUTE_ACCESS`. RLS remains the
+real data enforcement; this layer only controls what the UI shows and which URLs open.

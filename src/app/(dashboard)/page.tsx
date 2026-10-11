@@ -1,6 +1,8 @@
 import Link from 'next/link';
-import { AlertTriangle, ArrowRight, CheckCircle2, Route, Truck, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2, Lock, Route, Truck, Wallet } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { hasRole } from '@/lib/roles';
+import { STAT_ACCESS } from '@/lib/access';
 
 const ROLE_LABELS: Record<string, string> = {
   admin_staff: 'Admin Staff',
@@ -50,7 +52,7 @@ const QUICK_LINKS: Record<string, QuickLink[]> = {
   system_admin: [{ label: 'Manage user accounts', href: '/admin/users' }],
 };
 
-export default async function DashboardHome() {
+export default async function DashboardHome({ searchParams }: { searchParams?: { notice?: string } }) {
   const supabase = createClient();
   const {
     data: { user },
@@ -65,20 +67,50 @@ export default async function DashboardHome() {
   const role = profile?.role as string | undefined;
   const today = new Date().toISOString().slice(0, 10);
 
-  // --- At a Glance: same four numbers for everyone, a company-wide pulse. ---
-  const [activeCutoffs, unresolvedDiscrepancies, tripsInTransit, activeTrucks] = await Promise.all([
-    supabase.from('payroll_cutoffs').select('id', { count: 'exact', head: true }).neq('status', 'disbursed'),
-    supabase.from('stock_discrepancies').select('id', { count: 'exact', head: true }).is('resolved_at', null),
-    supabase.from('trips').select('id', { count: 'exact', head: true }).in('status', ['dispatched', 'en_route']),
-    supabase.from('trucks').select('id', { count: 'exact', head: true }).eq('is_active', true),
-  ]);
+  // --- At a Glance: only the numbers for work this role manages (see STAT_ACCESS in
+  // src/lib/access.ts). Each count is only queried when it will be shown, and a role never
+  // sees a card for a table RLS won't let it read, which would just be a misleading 0. ---
+  const statDefs = [
+    {
+      label: 'Active Payroll Cutoffs',
+      icon: Wallet,
+      roles: STAT_ACCESS.payrollCutoffs,
+      count: () => supabase.from('payroll_cutoffs').select('id', { count: 'exact', head: true }).neq('status', 'disbursed'),
+    },
+    {
+      label: 'Unresolved Discrepancies',
+      icon: AlertTriangle,
+      roles: STAT_ACCESS.discrepancies,
+      alertWhenPositive: true,
+      count: () => supabase.from('stock_discrepancies').select('id', { count: 'exact', head: true }).is('resolved_at', null),
+    },
+    {
+      label: 'Trips In Transit',
+      icon: Route,
+      roles: STAT_ACCESS.tripsInTransit,
+      count: () => supabase.from('trips').select('id', { count: 'exact', head: true }).in('status', ['dispatched', 'en_route']),
+    },
+    {
+      label: 'Active Trucks',
+      icon: Truck,
+      roles: STAT_ACCESS.activeTrucks,
+      count: () => supabase.from('trucks').select('id', { count: 'exact', head: true }).eq('is_active', true),
+    },
+  ].filter((def) => hasRole(role, [...def.roles]));
 
-  const stats = [
-    { label: 'Active Payroll Cutoffs', value: activeCutoffs.count ?? 0 },
-    { label: 'Unresolved Discrepancies', value: unresolvedDiscrepancies.count ?? 0 },
-    { label: 'Trips In Transit', value: tripsInTransit.count ?? 0 },
-    { label: 'Active Trucks', value: activeTrucks.count ?? 0 },
-  ];
+  const statCounts = await Promise.all(statDefs.map((def) => def.count()));
+  const stats = statDefs.map((def, i) => ({
+    label: def.label,
+    icon: def.icon,
+    value: statCounts[i].count ?? 0,
+    alert: !!def.alertWhenPositive && (statCounts[i].count ?? 0) > 0,
+  }));
+  const STAT_GRID: Record<number, string> = {
+    1: 'lg:grid-cols-1',
+    2: 'lg:grid-cols-2',
+    3: 'lg:grid-cols-3',
+    4: 'lg:grid-cols-4',
+  };
 
   // --- Needs Your Attention: tailored per role, mirroring myMapúa's personalized
   // Remarks list — only what's actually actionable for this specific viewer. ---
@@ -178,7 +210,6 @@ export default async function DashboardHome() {
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: TZ });
   const firstName = (profile?.full_name ?? '').split(' ')[0] || 'there';
 
-  const statIcons = [Wallet, AlertTriangle, Route, Truck];
   const SECTION = 'mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground';
 
   return (
@@ -208,32 +239,40 @@ export default async function DashboardHome() {
         </div>
       </section>
 
-      <section>
-        <p className={SECTION}>At a glance</p>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {stats.map((stat, i) => {
-            const Icon = statIcons[i];
-            const alert = stat.label === 'Unresolved Discrepancies' && stat.value > 0;
-            return (
-              <div key={stat.label} className="panel p-5 transition-colors hover:border-primary/40">
-                <div className="mb-4 flex items-center justify-between">
-                  <span
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg border ${
-                      alert ? 'border-red-400/30 bg-red-400/10' : 'border-primary/25 bg-accent'
-                    }`}
-                  >
-                    <Icon className={`h-4 w-4 ${alert ? 'text-red-300' : 'text-primary'}`} />
-                  </span>
-                </div>
-                <p className={`text-3xl font-semibold tracking-tight ${alert ? 'text-red-300' : 'text-foreground'}`}>
-                  {stat.value}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">{stat.label}</p>
-              </div>
-            );
-          })}
+      {searchParams?.notice === 'no-access' && (
+        <div className="panel flex items-center gap-3 p-4 text-sm text-muted">
+          <Lock className="h-4 w-4 shrink-0 text-primary" />
+          That page isn&rsquo;t part of your role, so you&rsquo;ve been brought back here.
         </div>
-      </section>
+      )}
+
+      {stats.length > 0 && (
+        <section>
+          <p className={SECTION}>At a glance</p>
+          <div className={`grid grid-cols-2 gap-4 ${STAT_GRID[stats.length]}`}>
+            {stats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div key={stat.label} className="panel p-5 transition-colors hover:border-primary/40">
+                  <div className="mb-4 flex items-center justify-between">
+                    <span
+                      className={`flex h-9 w-9 items-center justify-center rounded-lg border ${
+                        stat.alert ? 'border-red-400/30 bg-red-400/10' : 'border-primary/25 bg-accent'
+                      }`}
+                    >
+                      <Icon className={`h-4 w-4 ${stat.alert ? 'text-red-300' : 'text-primary'}`} />
+                    </span>
+                  </div>
+                  <p className={`text-3xl font-semibold tracking-tight ${stat.alert ? 'text-red-300' : 'text-foreground'}`}>
+                    {stat.value}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{stat.label}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-9 lg:grid-cols-5">
         <section className="lg:col-span-3">

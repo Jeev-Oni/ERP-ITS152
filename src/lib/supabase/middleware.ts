@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { canAccess, isGuardedPath } from "@/lib/access";
 
 export async function updateSession(request: NextRequest) {
 	let response = NextResponse.next({ request });
@@ -47,6 +48,28 @@ export async function updateSession(request: NextRequest) {
 		const url = request.nextUrl.clone();
 		url.pathname = "/login";
 		return NextResponse.redirect(url);
+	}
+
+	// Role gate: a signed-in user who opens a module their role doesn't manage (typed URL,
+	// old bookmark) is sent back to the dashboard. The sidebar already hides these links;
+	// this is what makes hiding them more than cosmetic. One small query, and only on module
+	// pages, never on "/" or static files. (RLS still protects the data either way.)
+	if (user && isGuardedPath(request.nextUrl.pathname)) {
+		const { data: profile } = await supabase
+			.from("profiles")
+			.select("role")
+			.eq("id", user.id)
+			.single();
+
+		if (!canAccess(profile?.role, request.nextUrl.pathname)) {
+			const url = request.nextUrl.clone();
+			url.pathname = "/";
+			url.search = "?notice=no-access";
+			const redirect = NextResponse.redirect(url);
+			// Carry over any session cookies that were just refreshed above.
+			response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+			return redirect;
+		}
 	}
 
 	return response;

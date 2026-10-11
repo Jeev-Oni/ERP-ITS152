@@ -81,7 +81,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       <div className="flex flex-1">
         <aside className="sticky top-[61px] h-[calc(100vh-61px)] w-64 shrink-0 overflow-y-auto border-r border-border bg-surface/60 p-4 backdrop-blur">
-          <SidebarNav isSystemAdmin={profile?.role === 'system_admin'} />
+          <SidebarNav role={profile?.role} />
         </aside>
         <main className="min-w-0 flex-1 px-8 py-8 text-muted">
           <div className="mx-auto max-w-6xl">{children}</div>

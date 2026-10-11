@@ -18,6 +18,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { canAccess } from '@/lib/access';
 
 const NAV = [
   {
@@ -74,8 +75,15 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
 
 const SECTION_LABEL = 'mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground';
 
-export function SidebarNav({ isSystemAdmin }: { isSystemAdmin: boolean }) {
+export function SidebarNav({ role }: { role: string | null | undefined }) {
   const pathname = usePathname();
+
+  // Only the links this role can open (see src/lib/access.ts); a section with no visible
+  // links disappears entirely instead of showing an empty heading.
+  const groups = NAV.map((group) => ({
+    ...group,
+    links: group.links.filter((link) => canAccess(role, link.href)),
+  })).filter((group) => group.links.length > 0);
 
   return (
     <>
@@ -87,7 +95,7 @@ export function SidebarNav({ isSystemAdmin }: { isSystemAdmin: boolean }) {
         </ul>
       </div>
 
-      {NAV.map((group) => (
+      {groups.map((group) => (
         <div key={group.section} className="mb-6">
           <p className={SECTION_LABEL}>{group.section}</p>
           <ul className="space-y-0.5">
@@ -98,7 +106,7 @@ export function SidebarNav({ isSystemAdmin }: { isSystemAdmin: boolean }) {
         </div>
       ))}
 
-      {isSystemAdmin && (
+      {canAccess(role, '/admin/users') && (
         <div className="mb-6">
           <p className={SECTION_LABEL}>Admin</p>
           <ul className="space-y-0.5">
