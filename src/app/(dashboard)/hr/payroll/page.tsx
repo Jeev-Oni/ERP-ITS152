@@ -4,6 +4,18 @@ import { hasRole } from '@/lib/roles';
 import { ReadOnlyNotice } from '@/components/shared/ReadOnlyNotice';
 import { CreateCutoffForm } from '@/components/hr/CreateCutoffForm';
 import { CutoffRow } from '@/components/hr/CutoffRow';
+import { PayrollSimulator } from '@/components/hr/PayrollSimulator';
+
+// Default simulation window = the current semi-monthly period (1st-15th or 16th-end).
+function currentHalfMonth(now = new Date()) {
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  return now.getDate() <= 15
+    ? { start: `${y}-${pad(m + 1)}-01`, end: `${y}-${pad(m + 1)}-15` }
+    : { start: `${y}-${pad(m + 1)}-16`, end: `${y}-${pad(m + 1)}-${pad(lastDay)}` };
+}
 
 // List of every payroll_cutoffs row — the entry point into Salary Distribution.
 export default async function PayrollPage() {
@@ -23,6 +35,18 @@ export default async function PayrollPage() {
       {!canEdit && <ReadOnlyNotice role={profile?.role} who="HR / Payroll Officer" />}
 
       {canEdit && <CreateCutoffForm />}
+
+      {canEdit && (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold">Payroll simulator</h2>
+            <p className="text-xs text-muted-foreground">
+              Preview what payroll would be for any date range without creating a cutoff or locking attendance.
+            </p>
+          </div>
+          <PayrollSimulator defaultStart={currentHalfMonth().start} defaultEnd={currentHalfMonth().end} />
+        </section>
+      )}
 
       <div className="table-wrap">
 <table className="data-table">

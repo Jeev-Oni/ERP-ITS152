@@ -9,6 +9,7 @@ import { GeneratePayslipsButton } from '@/components/hr/GeneratePayslipsButton';
 import { PayrollProgress } from '@/components/hr/PayrollProgress';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { BackLink } from '@/components/shared/BackLink';
+import { PayrollSimulator } from '@/components/hr/PayrollSimulator';
 
 // One payroll_cutoffs row end to end: compute -> approve/revise -> disburse -> payslips.
 // This page is the full state machine described in docs/process-flows/salary-distribution.md.
@@ -51,6 +52,15 @@ export default async function PayrollCutoffDetailPage({ params }: { params: { id
         status={cutoff.status}
         currentRole={role}
       />
+
+      <RoleGate currentRole={role as any} allow={['hr_payroll_officer']}>
+        <details className="panel p-5">
+          <summary className="cursor-pointer text-sm font-medium">Simulate this period (read-only what-if)</summary>
+          <div className="mt-4">
+            <PayrollSimulator defaultStart={cutoff.period_start} defaultEnd={cutoff.period_end} />
+          </div>
+        </details>
+      </RoleGate>
 
       <RoleGate currentRole={role as any} allow={['management']}>
         {cutoff.status === 'computed' && <PayrollApprovalPanel cutoffId={cutoff.id} />}

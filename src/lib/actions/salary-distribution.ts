@@ -10,10 +10,7 @@ import {
 } from '@/lib/validations/salary-distribution';
 import { attendanceUpdateSchema, cutoffSchema, employeeSchema } from '@/lib/validations/master-data';
 import { dbError, noRowsAffected, type ActionResult } from './result';
-
-// Ordinary overtime multiplier. Adjust to match actual company/labor-code policy —
-// this is a placeholder so the pipeline is demonstrably end-to-end, not a payroll-law claim.
-const OVERTIME_MULTIPLIER = 1.25;
+import { calculateEmployeePay, DEFAULT_POLICY, type PayrollPolicy } from '@/lib/payroll/calculate';
 
 /**
  * "Cutoff Period Begins" — opens a new payroll_cutoffs row for Admin Staff to log
@@ -55,6 +52,19 @@ export async function logAttendance(input: AttendanceLogInput): Promise<ActionRe
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
+  // RLS would reject a locked date with a generic 42501 ("no permission, or locked").
+  // Ask the same rule it uses (is_attendance_locked, migration 0009) first, so the user is
+  // told it's the payroll lock, not their role, and what to do about it.
+  const { data: locked } = await supabase.rpc('is_attendance_locked', { p_date: parsed.log_date });
+  if (locked === true) {
+    return {
+      error:
+        `${parsed.log_date} falls inside a payroll cutoff that is already computed/approved/disbursed, ` +
+        'so attendance for it is locked. Use a date in an open cutoff, or have HR press ' +
+        '"Send Back for Correction" on that cutoff (only possible before Management decides).',
+    };
+  }
+
   const { error } = await supabase.from('attendance_logs').insert({
     ...parsed,
     logged_by: user.id,
@@ -70,14 +80,125 @@ export async function logAttendance(input: AttendanceLogInput): Promise<ActionRe
 }
 
 /**
- * "Compute Hours, OT & Deductions" — HR/Payroll Officer.
- * Pulls every active employee's attendance_logs within the cutoff's date range, splits
- * each day into regular (up to 8h) and overtime (anything beyond), and writes one
- * payroll_computations row per employee. Deductions default to 0 — HR adjusts them per
- * employee afterward via updateComputationDeductions() (company-specific: SSS,
- * PhilHealth, Pag-IBIG, tax, cash advances, etc. are not hardcoded here).
- * Re-running this after a "Revise Computation" loop overwrites the prior computation
- * for each employee (upsert on the payroll_cutoff_id + employee_id unique constraint).
+ * Shared by computePayroll() and previewPayroll(): reads attendance + employees for a date
+ * range and runs the pure calculator. Reads only — never writes.
+ *
+ * One query for all logs (grouped in memory) instead of one query per employee.
+ */
+async function buildPayrollLines(
+  supabase: ReturnType<typeof createClient>,
+  periodStart: string,
+  periodEnd: string,
+  policy: PayrollPolicy,
+  existingDeductions: Map<string, number> = new Map()
+) {
+  const { data: employees, error: empError } = await supabase
+    .from('employees')
+    .select('id, employee_code, full_name, daily_rate')
+    .eq('is_active', true)
+    .order('full_name');
+  if (empError) return { error: empError.message as string };
+
+  const { data: logs, error: logError } = await supabase
+    .from('attendance_logs')
+    .select('employee_id, hours_worked')
+    .gte('log_date', periodStart)
+    .lte('log_date', periodEnd);
+  if (logError) return { error: logError.message as string };
+
+  const hoursByEmployee = new Map<string, number[]>();
+  for (const log of logs ?? []) {
+    const list = hoursByEmployee.get(log.employee_id) ?? [];
+    list.push(Number(log.hours_worked ?? 0));
+    hoursByEmployee.set(log.employee_id, list);
+  }
+
+  const lines = (employees ?? []).map((emp: any) => ({
+    employeeId: emp.id as string,
+    employeeCode: emp.employee_code as string,
+    fullName: emp.full_name as string,
+    dailyRate: Number(emp.daily_rate),
+    ...calculateEmployeePay(
+      hoursByEmployee.get(emp.id) ?? [],
+      Number(emp.daily_rate),
+      existingDeductions.get(emp.id) ?? 0,
+      policy
+    ),
+  }));
+
+  return { lines };
+}
+
+/**
+ * SIMULATION — "what would payroll be for this period?" Writes nothing, changes no status,
+ * so it works whether or not the period's attendance is locked, and before a cutoff even
+ * exists. HR/Payroll Officer only (employees.daily_rate is not visible to anyone else).
+ *
+ * `overrides` lets HR try what-if policy values (e.g. 1.5x overtime) without touching code.
+ */
+export async function previewPayroll(
+  periodStart: string,
+  periodEnd: string,
+  overrides: Partial<PayrollPolicy> = {}
+) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const parsed = cutoffSchema.safeParse({ period_start: periodStart, period_end: periodEnd });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const policy: PayrollPolicy = { ...DEFAULT_POLICY, ...overrides };
+
+  // If a cutoff for exactly this period already has computations, carry its saved deductions
+  // into the preview so the simulation matches what the real recompute would keep.
+  const { data: cutoff } = await supabase
+    .from('payroll_cutoffs')
+    .select('id, status')
+    .eq('period_start', periodStart)
+    .eq('period_end', periodEnd)
+    .maybeSingle();
+
+  const existingDeductions = new Map<string, number>();
+  if (cutoff) {
+    const { data: saved } = await supabase
+      .from('payroll_computations')
+      .select('employee_id, deductions')
+      .eq('payroll_cutoff_id', cutoff.id);
+    for (const row of saved ?? []) existingDeductions.set(row.employee_id, Number(row.deductions));
+  }
+
+  const result = await buildPayrollLines(supabase, periodStart, periodEnd, policy, existingDeductions);
+  if ('error' in result) return { error: result.error };
+
+  const totals = result.lines.reduce(
+    (t, l) => ({
+      regularHours: t.regularHours + l.regularHours,
+      overtimeHours: t.overtimeHours + l.overtimeHours,
+      grossPay: t.grossPay + l.grossPay,
+      deductions: t.deductions + l.deductions,
+      netPay: t.netPay + l.netPay,
+    }),
+    { regularHours: 0, overtimeHours: 0, grossPay: 0, deductions: 0, netPay: 0 }
+  );
+
+  return {
+    success: true as const,
+    policy,
+    cutoffStatus: (cutoff?.status as string | undefined) ?? null,
+    lines: result.lines,
+    totals: Object.fromEntries(Object.entries(totals).map(([k, v]) => [k, Math.round(v * 100) / 100])) as typeof totals,
+  };
+}
+
+/**
+ * "Compute Hours, OT & Deductions" — HR/Payroll Officer. The REAL run: writes one
+ * payroll_computations row per active employee and moves the cutoff to 'computed', which
+ * locks that period's attendance. Use previewPayroll() first if you only want to look.
+ *
+ * Re-running after "Revise Computation" upserts on (payroll_cutoff_id, employee_id) and
+ * KEEPS each employee's existing deductions — the old version reset them to 0, silently
+ * erasing whatever HR had typed in.
  */
 export async function computePayroll(payrollCutoffId: string) {
   const supabase = createClient();
@@ -91,46 +212,39 @@ export async function computePayroll(payrollCutoffId: string) {
     .single();
   if (cutoffError || !cutoff) return { error: cutoffError?.message ?? 'Cutoff not found' };
 
-  const { data: employees, error: empError } = await supabase
-    .from('employees')
-    .select('id, daily_rate')
-    .eq('is_active', true);
-  if (empError) return { error: empError.message };
+  // Enforce the state machine here too, not just by hiding buttons in the UI.
+  if (cutoff.status !== 'closed' && cutoff.status !== 'revision_needed') {
+    return { error: `Payroll can only be computed for a closed cutoff or one sent back for revision (this one is "${cutoff.status}").` };
+  }
 
-  for (const employee of employees ?? []) {
-    const { data: logs } = await supabase
-      .from('attendance_logs')
-      .select('hours_worked')
-      .eq('employee_id', employee.id)
-      .gte('log_date', cutoff.period_start)
-      .lte('log_date', cutoff.period_end);
+  const { data: saved } = await supabase
+    .from('payroll_computations')
+    .select('employee_id, deductions')
+    .eq('payroll_cutoff_id', payrollCutoffId);
+  const existingDeductions = new Map<string, number>(
+    (saved ?? []).map((r: any) => [r.employee_id as string, Number(r.deductions)])
+  );
 
-    let regularHours = 0;
-    let overtimeHours = 0;
-    for (const log of logs ?? []) {
-      const hours = Number(log.hours_worked ?? 0);
-      regularHours += Math.min(hours, 8);
-      overtimeHours += Math.max(hours - 8, 0);
-    }
+  const result = await buildPayrollLines(supabase, cutoff.period_start, cutoff.period_end, DEFAULT_POLICY, existingDeductions);
+  if ('error' in result) return { error: result.error };
 
-    const hourlyRate = Number(employee.daily_rate) / 8;
-    const grossPay = regularHours * hourlyRate + overtimeHours * hourlyRate * OVERTIME_MULTIPLIER;
-    const deductions = 0;
-    const netPay = grossPay - deductions;
+  // One batched upsert instead of one round-trip per employee.
+  const rows = result.lines.map((l) => ({
+    payroll_cutoff_id: payrollCutoffId,
+    employee_id: l.employeeId,
+    regular_hours: l.regularHours,
+    overtime_hours: l.overtimeHours,
+    deductions: l.deductions,
+    gross_pay: l.grossPay,
+    net_pay: l.netPay,
+    computed_by: user.id,
+    computed_at: new Date().toISOString(),
+  }));
 
-    const { error: upsertError } = await supabase.from('payroll_computations').upsert(
-      {
-        payroll_cutoff_id: payrollCutoffId,
-        employee_id: employee.id,
-        regular_hours: regularHours,
-        overtime_hours: overtimeHours,
-        deductions,
-        gross_pay: grossPay,
-        net_pay: netPay,
-        computed_by: user.id,
-      },
-      { onConflict: 'payroll_cutoff_id,employee_id' }
-    );
+  if (rows.length > 0) {
+    const { error: upsertError } = await supabase
+      .from('payroll_computations')
+      .upsert(rows, { onConflict: 'payroll_cutoff_id,employee_id' });
     if (upsertError) return { error: upsertError.message };
   }
 
@@ -142,6 +256,7 @@ export async function computePayroll(payrollCutoffId: string) {
 
   revalidatePath(`/hr/payroll/${payrollCutoffId}`);
   revalidatePath('/hr/payroll');
+  revalidatePath('/hr/attendance');
   return { success: true };
 }
 
@@ -159,7 +274,8 @@ export async function updateComputationDeductions(computationId: string, deducti
     .single();
   if (fetchError || !computation) return { error: fetchError?.message ?? 'Computation not found' };
 
-  const netPay = Number(computation.gross_pay) - deductions;
+  if (!Number.isFinite(deductions) || deductions < 0) return { error: 'Deductions must be 0 or more.' };
+  const netPay = Math.max(Math.round((Number(computation.gross_pay) - deductions) * 100) / 100, 0);
   const { error } = await supabase
     .from('payroll_computations')
     .update({ deductions, net_pay: netPay })
